@@ -1,0 +1,108 @@
+:host {
+  --active-color: green;
+  --inactive-color: gray;
+  --active-stroke: 2;
+  --inactive-stroke: 4;
+  display: block;
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+* {
+  user-select:none;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  background: black;
+  overflow: hidden;
+}
+
+.absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cropper-controls {
+  stroke:var(--active-color);
+}
+
+.footer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 100px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.items {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 2.0em;
+}
+
+.items .item {
+  flex: 1;
+  text-align: center;
+}
+.items .item:first-child {
+  text-align: left;
+}
+.items .item:last-child {
+  text-align: right;
+}
+
+.accept-use img {
+  width: 2.5em;
+  height: 2.5em;
+  pointer-events: all;
+  cursor:pointer;
+}
+
+.accept-cancel img {
+  width: 2.5em;
+  height: 2.5em;
+  pointer-events: all;
+  cursor:pointer;
+}
+
+.cropper-svg {
+  align-self: center;
+  touch-action: none;
+  cursor:grab;
+}
+
+.cropper-svg polygon {
+  cursor:move;
+}
+
+.cropper-svg rect {
+  cursor:grab;
+}
+
+.hidden-canvas {
+  display: none;
+}
+
+.cropper-svg .inactive-selection {
+  stroke:var(--inactive-color);
+  cursor:pointer;
+}
+
+.dashed {
+  stroke-dasharray:10,10;
+}

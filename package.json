@@ -1,0 +1,58 @@
+{
+  "name": "image-cropper-component",
+  "version": "2.3.1",
+  "description": "An image cropper web component.",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.js",
+  "es2015": "dist/esm/index.mjs",
+  "es2017": "dist/esm/index.mjs",
+  "types": "dist/types/index.d.ts",
+  "collection": "dist/collection/collection-manifest.json",
+  "collection:main": "dist/collection/index.js",
+  "unpkg": "dist/image-cropper-component/image-cropper-component.esm.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tony-xlh/image-cropper-component.git"
+  },
+  "files": [
+    "dist/",
+    "loader/"
+  ],
+  "keywords": [
+    "image",
+    "crop",
+    "cropper",
+    "document",
+    "perspective transformation",
+    "normalization",
+    "dynamsoft",
+    "web component"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "stencil build --docs",
+    "start": "stencil build --dev --watch --serve",
+    "test": "stencil test --spec --e2e",
+    "test.watch": "stencil test --spec --e2e --watchAll",
+    "generate": "stencil generate"
+  },
+  "dependencies": {
+    "@stencil/core": "^4.12.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.11",
+    "dynamsoft-capture-vision-router": "^2.0.30",
+    "dynamsoft-core": "^3.0.30",
+    "dynamsoft-document-normalizer": "^2.0.20",
+    "dynamsoft-license": "^3.0.20",
+    "i": "^0.3.7",
+    "jest": "^27.5.1",
+    "jest-cli": "^27.5.1",
+    "npm": "^10.2.5",
+    "puppeteer": "^19.5.2"
+  },
+  "license": "MIT"
+}
