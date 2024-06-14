@@ -78,6 +78,7 @@ export class ImageCropper {
     })
     this.containerElement.addEventListener("touchend", () => {
       this.previousDistance = undefined;
+      // this.hideMagnifier(); // Hide magnifier on touch end
     })
   }
 
@@ -343,7 +344,7 @@ export class ImageCropper {
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
       this.polygonMouseDown = false;
-      this.hideMagnifier(); // Hide the magnifier
+      // this.hideMagnifier(); // Hide the magnifier
     }
   }
 
@@ -497,7 +498,7 @@ export class ImageCropper {
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
       this.polygonMouseDown = false;
-      this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
+      // this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
     }
   }
 
@@ -521,7 +522,7 @@ export class ImageCropper {
     e.stopPropagation();
     this.selectedHandlerIndex = -1;
     this.polygonMouseDown = false;
-    this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
+    // this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
   }
 
   onHandlerMouseDown(e:MouseEvent,index:number){
@@ -537,7 +538,7 @@ export class ImageCropper {
     e.stopPropagation();
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
-      this.hideMagnifier(); // Hide the magnifier
+      // this.hideMagnifier(); // Hide the magnifier
     }
   }
 
@@ -938,8 +939,10 @@ export class ImageCropper {
   
     // Calculate the position of the magnifier
     const magnifierSize = 100; // Example size
-    const magnifierLeft = (coord.x - 300) - magnifierSize / 2 ;
-    const magnifierTop = (coord.y - 200) - magnifierSize / 2;
+    // const magnifierLeft = (coord.x - 300) - magnifierSize / 2 ;
+    // const magnifierTop = (coord.y - 200) - magnifierSize / 2;
+    const magnifierLeft = coord.x - magnifierSize ;
+    const magnifierTop = coord.y - magnifierSize;
   
     // Cast svgElement to SVGSVGElement to use createSVGPoint
     const svgElement = this.svgElement as unknown as SVGSVGElement;
@@ -953,8 +956,8 @@ export class ImageCropper {
       const transformedPoint = point.matrixTransform(ctm);
   
       // Set the magnifier's position
-      this.magnifierElement.style.left = `${transformedPoint.x}px`;
-      this.magnifierElement.style.top = `${transformedPoint.y}px`;
+      this.magnifierElement.style.left = `${transformedPoint.x - 40}px`;
+      this.magnifierElement.style.top = `${transformedPoint.y - 210}px`;
     } else {
       // Fallback if methods are not available
       this.magnifierElement.style.left = `${magnifierLeft}px`;
