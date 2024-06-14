@@ -78,7 +78,7 @@ export class ImageCropper {
     })
     this.containerElement.addEventListener("touchend", () => {
       this.previousDistance = undefined;
-      // this.hideMagnifier(); // Hide magnifier on touch end
+      this.hideMagnifier(); // Hide magnifier on touch end
     })
   }
 
@@ -344,7 +344,7 @@ export class ImageCropper {
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
       this.polygonMouseDown = false;
-      // this.hideMagnifier(); // Hide the magnifier
+      this.hideMagnifier(); // Hide the magnifier
     }
   }
 
@@ -498,7 +498,7 @@ export class ImageCropper {
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
       this.polygonMouseDown = false;
-      // this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
+      this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
     }
   }
 
@@ -522,7 +522,7 @@ export class ImageCropper {
     e.stopPropagation();
     this.selectedHandlerIndex = -1;
     this.polygonMouseDown = false;
-    // this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
+    this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
   }
 
   onHandlerMouseDown(e:MouseEvent,index:number){
@@ -538,7 +538,7 @@ export class ImageCropper {
     e.stopPropagation();
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
-      // this.hideMagnifier(); // Hide the magnifier
+      this.hideMagnifier(); // Hide the magnifier
     }
   }
 
