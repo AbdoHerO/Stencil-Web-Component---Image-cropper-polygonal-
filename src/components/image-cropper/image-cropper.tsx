@@ -51,6 +51,8 @@ export class ImageCropper {
   cvr:CaptureVisionRouter|undefined;
   usingTouchEvent:boolean = false;
   usingQuad = false;
+  magnifierElement: HTMLElement; // Add this line
+
   @Prop() img?: HTMLImageElement;
   @Prop() rect?: Rect;
   @Prop() quad?: Quad;
@@ -287,6 +289,9 @@ export class ImageCropper {
         this.handlerMouseDownPoint.y = coord.y;
       }else{
         this.svgMouseDownPoint = {x:coord.x,y:coord.y};
+        this.polygonMouseDown = true; // Add this line to enable dragging immediately
+        this.polygonMouseDownPoint = { x: coord.x, y: coord.y }; // Add this line to store the initial touch point
+        this.originalPoints = JSON.parse(JSON.stringify(this.points)); // Add this line to store the original points
       }
     }
   }
@@ -303,6 +308,8 @@ export class ImageCropper {
     }else{
       if (this.svgMouseDownPoint) {
         this.panSVG(e);
+      } else if (this.polygonMouseDown) { // Add this condition to handle dragging
+        this.handleMoveEvent(e);
       }else{
         this.handleMoveEvent(e);
       }
@@ -336,6 +343,7 @@ export class ImageCropper {
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
       this.polygonMouseDown = false;
+      this.hideMagnifier(); // Hide the magnifier
     }
   }
 
@@ -412,6 +420,8 @@ export class ImageCropper {
         }
       }
       this.points = newPoints;
+      this.showMagnifier(); // Show the magnifier when the rect is moved
+      this.updateMagnifier(coord); // Update the magnifier position and content
     }
     if (this.selectedHandlerIndex >= 0) {
       let pointIndex = this.getPointIndexFromHandlerIndex(this.selectedHandlerIndex);
@@ -457,6 +467,8 @@ export class ImageCropper {
         this.restrainPointsInBounds(newPoints,this.img.naturalWidth,this.img.naturalHeight);
       }
       this.points = newPoints;
+      this.showMagnifier(); // Show the magnifier when the rect is moved
+      this.updateMagnifier(coord); // Update the magnifier position and content
     }
   }
 
@@ -477,6 +489,7 @@ export class ImageCropper {
     let coord = this.getMousePosition(e,this.svgElement);
     this.polygonMouseDownPoint.x = coord.x;
     this.polygonMouseDownPoint.y = coord.y;
+    this.showMagnifier(); // Show the magnifier when the rect starts being moved
   }
 
   onPolygonMouseUp(e:MouseEvent){
@@ -484,6 +497,7 @@ export class ImageCropper {
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
       this.polygonMouseDown = false;
+      this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
     }
   }
 
@@ -491,18 +505,23 @@ export class ImageCropper {
     this.usingTouchEvent = true;
     e.stopPropagation();
     this.selectedHandlerIndex = -1;
-    this.polygonMouseDown = false;
-    this.originalPoints = JSON.parse(JSON.stringify(this.points));
+    // this.polygonMouseDown = false;
     this.polygonMouseDown = true;
+    this.originalPoints = JSON.parse(JSON.stringify(this.points));
+    // this.polygonMouseDown = true;
     let coord = this.getMousePosition(e,this.svgElement);
-    this.polygonMouseDownPoint.x = coord.x;
-    this.polygonMouseDownPoint.y = coord.y;
+    // this.polygonMouseDownPoint.x = coord.x;
+    // this.polygonMouseDownPoint.y = coord.y;
+    this.polygonMouseDownPoint = { x: coord.x, y: coord.y }; // Store the initial touch point
+    this.showMagnifier(); // Show the magnifier when the rect starts being moved
+
   }
 
   onPolygonTouchEnd(e:TouchEvent) {
     e.stopPropagation();
     this.selectedHandlerIndex = -1;
     this.polygonMouseDown = false;
+    this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
   }
 
   onHandlerMouseDown(e:MouseEvent,index:number){
@@ -518,6 +537,7 @@ export class ImageCropper {
     e.stopPropagation();
     if (!this.usingTouchEvent) {
       this.selectedHandlerIndex = -1;
+      this.hideMagnifier(); // Hide the magnifier
     }
   }
 
@@ -891,10 +911,90 @@ export class ImageCropper {
             {this.renderHandlers()}
           </svg>
           {this.renderFooter()}
+          <div class="magnifier" ref={(el) => this.magnifierElement = el as HTMLElement}></div>
           <slot></slot>
         </div>
       </Host>
     );
   }
+  
+  showMagnifier() {
+    if (this.magnifierElement) {
+      this.magnifierElement.style.display = 'block';
+    }
+  }
+  
+  hideMagnifier() {
+    if (this.magnifierElement) {
+      this.magnifierElement.style.display = 'none';
+    }
+  }
+  
+  updateMagnifier(coord: Point) {
+    if (!this.magnifierElement || !this.img) return;
+  
+    // Get the coordinates and dimensions of the rect
+    const rect = this.getRectFromPoints(this.points);
+  
+    // Calculate the position of the magnifier
+    const magnifierSize = 100; // Example size
+    const magnifierLeft = (coord.x - 300) - magnifierSize / 2 ;
+    const magnifierTop = (coord.y - 200) - magnifierSize / 2;
+  
+    // Cast svgElement to SVGSVGElement to use createSVGPoint
+    const svgElement = this.svgElement as unknown as SVGSVGElement;
+  
+    // Check if getScreenCTM and createSVGPoint methods are available
+    if (svgElement.getScreenCTM && svgElement.createSVGPoint) {
+      const ctm = svgElement.getScreenCTM();
+      const point = svgElement.createSVGPoint();
+      point.x = magnifierLeft;
+      point.y = magnifierTop;
+      const transformedPoint = point.matrixTransform(ctm);
+  
+      // Set the magnifier's position
+      this.magnifierElement.style.left = `${transformedPoint.x}px`;
+      this.magnifierElement.style.top = `${transformedPoint.y}px`;
+    } else {
+      // Fallback if methods are not available
+      this.magnifierElement.style.left = `${magnifierLeft}px`;
+      this.magnifierElement.style.top = `${magnifierTop}px`;
+    }
+  
+    // Set the magnifier's content (e.g., magnified image)
+    const zoomLevel = 0.5; // Example zoom level
+    const sx = Math.max(0, rect.x + (coord.x - rect.x) / this.scale - magnifierSize / zoomLevel / 2);
+    const sy = Math.max(0, rect.y + (coord.y - rect.y) / this.scale - magnifierSize / zoomLevel / 2);
+    const sw = magnifierSize / zoomLevel;
+    const sh = magnifierSize / zoomLevel;
+    const dx = 0;
+    const dy = 0;
+    const dw = magnifierSize;
+    const dh = magnifierSize;
+  
+    const magnifierCanvas = document.createElement("canvas");
+    magnifierCanvas.width = magnifierSize;
+    magnifierCanvas.height = magnifierSize;
+    const magnifierCtx = magnifierCanvas.getContext("2d");
+  
+    magnifierCtx.drawImage(this.img, sx, sy, sw, sh, dx, dy, dw, dh);
+
+    // Draw the polygon on the magnifier canvas
+    magnifierCtx.scale(zoomLevel, zoomLevel);
+    magnifierCtx.strokeStyle = 'orange'; // Set the style as needed
+    magnifierCtx.lineWidth = this.activeStroke / zoomLevel; // Adjust the line width
+    magnifierCtx.beginPath();
+    magnifierCtx.moveTo((this.points[0].x - sx), (this.points[0].y - sy));
+    for (let i = 1; i < this.points.length; i++) {
+      magnifierCtx.lineTo((this.points[i].x - sx), (this.points[i].y - sy));
+    }
+    magnifierCtx.closePath();
+    magnifierCtx.stroke();
+  
+    this.magnifierElement.style.backgroundImage = `url(${magnifierCanvas.toDataURL()})`;
+  }
+  
+  
+
 
 }

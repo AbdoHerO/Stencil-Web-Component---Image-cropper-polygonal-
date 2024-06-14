@@ -24,7 +24,6 @@
 | ------------------ | ----------- | --------------------- |
 | `canceled`         |             | `CustomEvent<void>`   |
 | `confirmed`        |             | `CustomEvent<void>`   |
-| `imageCropped`     |             | `CustomEvent<string>` |
 | `selectionClicked` |             | `CustomEvent<number>` |
 
 

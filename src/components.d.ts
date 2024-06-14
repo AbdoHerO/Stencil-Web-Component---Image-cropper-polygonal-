@@ -38,7 +38,6 @@ declare global {
         "confirmed": void;
         "canceled": void;
         "selectionClicked": number;
-        "imageCropped": string;
     }
     interface HTMLImageCropperElement extends Components.ImageCropper, HTMLStencilElement {
         addEventListener<K extends keyof HTMLImageCropperElementEventMap>(type: K, listener: (this: HTMLImageCropperElement, ev: ImageCropperCustomEvent<HTMLImageCropperElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -67,7 +66,6 @@ declare namespace LocalJSX {
         "license"?: string;
         "onCanceled"?: (event: ImageCropperCustomEvent<void>) => void;
         "onConfirmed"?: (event: ImageCropperCustomEvent<void>) => void;
-        "onImageCropped"?: (event: ImageCropperCustomEvent<string>) => void;
         "onSelectionClicked"?: (event: ImageCropperCustomEvent<number>) => void;
         "quad"?: Quad;
         "rect"?: Rect;

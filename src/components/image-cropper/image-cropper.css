@@ -1,8 +1,11 @@
 :host {
-  --active-color: green;
-  --inactive-color: gray;
-  --active-stroke: 2;
+  /* --active-color: rgb(5, 197, 175); */
+    /* --inactive-color: gray; */
+  --active-color:orange;
+  --inactive-color:orange;
+  --active-stroke: 4;
   --inactive-stroke: 4;
+  --main-background: transparent;
   display: block;
   position: relative;
   top: 0;
@@ -20,7 +23,7 @@
 .container {
   display: flex;
   justify-content: center;
-  background: black;
+  background: var(--main-background);
   overflow: hidden;
 }
 
@@ -105,4 +108,20 @@
 
 .dashed {
   stroke-dasharray:10,10;
+}
+
+
+.magnifier {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  left: 0;
+  top: 0;
+  border: 1px solid #00bceb;
+  border-radius: 50%;
+  overflow: hidden;
+  display: none;
+  pointer-events: none;
+  background-size: 100%;
+  background-repeat: no-repeat;
 }
