@@ -1,7 +1,4 @@
 import { Component, Event, EventEmitter, Fragment, Host, Method, Prop, State, Watch, h } from '@stencil/core';
-import { DetectedQuadResultItem, NormalizedImageResultItem } from 'dynamsoft-document-normalizer';
-import { CaptureVisionRouter } from 'dynamsoft-capture-vision-router';
-import { CapturedResult } from 'dynamsoft-core';
 
 export interface DetectedQuadResult{
   location: Quad;
@@ -48,8 +45,7 @@ export class ImageCropper {
   svgElement:SVGElement;
   canvasElement:HTMLCanvasElement;
   originalPoints:[Point,Point,Point,Point] = undefined;
-  cvr:CaptureVisionRouter|undefined;
-  usingTouchEvent:boolean = false;
+   usingTouchEvent:boolean = false;
   usingQuad = false;
   magnifierElement: HTMLElement; // Add this line
 
@@ -62,6 +58,7 @@ export class ImageCropper {
   @Prop() inactiveSelections?: (Quad|Rect)[];
   @State() viewBox:string = "0 0 1280 720";
   @State() activeStroke:number = 2;
+  @Prop() rotation:number = 0;
   @State() inActiveStroke:number = 4;
   @State() selectedHandlerIndex:number = -1;
   @State() points:[Point,Point,Point,Point] = undefined;
@@ -221,11 +218,11 @@ export class ImageCropper {
     return (
       <Fragment>
         {this.handlers.map(index => (
-          <rect 
-            x={this.getHandlerPos(index,"x")} 
-            y={this.getHandlerPos(index,"y")} 
+          <rect
+            x={this.getHandlerPos(index,"x")}
+            y={this.getHandlerPos(index,"y")}
             width={this.getHandlerSize()}
-            height={this.getHandlerSize()} 
+            height={this.getHandlerSize()}
             class="cropper-controls"
             stroke-width={index === this.selectedHandlerIndex ? this.activeStroke * 2 * this.getRatio() : this.activeStroke * this.getRatio()}
             fill="transparent"
@@ -360,7 +357,7 @@ export class ImageCropper {
       this.scale = this.scale + 0.1;
     }else{
       this.scale = Math.max(0.1, this.scale - 0.1);
-    } 
+    }
     e.preventDefault();
   }
 
@@ -373,9 +370,9 @@ export class ImageCropper {
 
   getPanAndZoomStyle(){
     if (this.img) {
-      // const percentX = this.offsetX / this.img.naturalWidth * 100; 
+      // const percentX = this.offsetX / this.img.naturalWidth * 100;
       // const percentY = this.offsetY / this.img.naturalHeight * 100;
-      return "scale(1.0)";
+      return `scale(1.0)  rotate(${this.rotation}deg)`;
       // return "scale("+this.scale+") translateX("+percentX+"%)translateY("+percentY+"%)";
     }else{
       return "scale(1.0)";
@@ -574,22 +571,43 @@ export class ImageCropper {
   }
 
   //Convert the screen coordinates to the SVG's coordinates from https://www.petercollingridge.co.uk/tutorials/svg/interactive/dragging/
-  getMousePosition(event:any,svg:any) {
+  getMousePosition(event: any, svg: any) {
     let CTM = svg.getScreenCTM();
-    if (event.targetTouches) { //if it is a touch event
-      let x = event.targetTouches[0].clientX;
-      let y = event.targetTouches[0].clientY;
-      return {
-        x: (x - CTM.e) / CTM.a,
-        y: (y - CTM.f) / CTM.d
-      };
-    }else{
-      return {
-        x: (event.clientX - CTM.e) / CTM.a,
-        y: (event.clientY - CTM.f) / CTM.d
-      };
+    if (!CTM) {
+      return { x: 0, y: 0 };
     }
+
+    let x, y;
+    if (event.targetTouches) { // if it is a touch event
+      x = event.targetTouches[0].clientX;
+      y = event.targetTouches[0].clientY;
+    } else {
+      x = event.clientX;
+      y = event.clientY;
+    }
+
+    // Invert the transformation matrix
+    let det = CTM.a * CTM.d - CTM.b * CTM.c;
+    if (det === 0) {
+      // Handle the case where the matrix is singular
+      return { x: 0, y: 0 };
+    }
+
+    let invCTM = {
+      a: CTM.d / det,
+      b: -CTM.b / det,
+      c: -CTM.c / det,
+      d: CTM.a / det,
+      e: (CTM.c * CTM.f - CTM.d * CTM.e) / det,
+      f: (CTM.b * CTM.e - CTM.a * CTM.f) / det
+    };
+
+    return {
+      x: (x - CTM.e) * invCTM.a + (y - CTM.f) * invCTM.c,
+      y: (x - CTM.e) * invCTM.b + (y - CTM.f) * invCTM.d
+    };
   }
+
 
   getRatio(){
     if (this.img) {
@@ -675,7 +693,7 @@ export class ImageCropper {
         minX = Math.min(point.x,minX);
         minY = Math.min(point.y,minY);
         maxX = Math.max(point.x,maxX);
-        maxY = Math.max(point.y,maxY);  
+        maxY = Math.max(point.y,maxY);
       }
     }
     minX = Math.floor(minX);
@@ -685,80 +703,7 @@ export class ImageCropper {
     return {x:minX,y:minY,width:maxX - minX,height:maxY - minY};
   }
 
-  @Method()
-  async getCroppedImage(options:CropOptions):Promise<string>
-  {
-    let img:Blob|string|HTMLImageElement|HTMLCanvasElement = this.img;
-    if (options.source) {
-      img = options.source;
-    }
-    let isQuad = false;
-    if (options.selection) {
-      if (!("width" in options.selection)) {
-        isQuad = true;
-      }
-    }else{
-      if (this.usingQuad) {
-        isQuad = true;
-      }
-    }
-    if (options.perspectiveTransform && window["Dynamsoft"] && isQuad) {
-      if (!this.cvr) {
-        await this.initCVR();
-      }
-      let templateName = "NormalizeDocument_Color";
-      if (options.colorMode) {
-        if (options.colorMode === "binary") {
-          templateName = "NormalizeDocument_Binary";
-        } else if (options.colorMode === "gray") {
-          templateName = "NormalizeDocument_Gray";
-        } else {
-          templateName = "NormalizeDocument_Color";
-        }
-      }
-      let quad:Quad;
-      if (options.selection) {
-        if ("width" in options.selection) {
-          quad = {points:this.getPointsFromRect(options.selection)};
-        }else{
-          quad = options.selection;
-        }
-      }else{
-        quad = await this.getQuad();
-      }
-      let settings = await this.cvr.getSimplifiedSettings(templateName);
-      settings.roi  = quad;
-      settings.roiMeasuredInPercentage = false;
-      await this.cvr.updateSettings(templateName, settings);
-      this.cvr.maxCvsSideLength = 99999;
-      let normalizedImagesResult:CapturedResult = await this.cvr.capture(img,templateName,true);
-      let normalizedImageResultItem:NormalizedImageResultItem = (normalizedImagesResult.items[0] as NormalizedImageResultItem);
-      let dataURL = normalizedImageResultItem.toCanvas().toDataURL();
-      return dataURL;
-    }else{
-      let ctx = this.canvasElement.getContext("2d");
-      let rect:Rect;
-      if (options.selection) {
-        if ("width" in options.selection) {
-          rect = options.selection;
-        }else{
-          rect = this.getRectFromPoints(options.selection.points);
-        }
-      }else{
-        rect = await this.getRect();
-      }
-      if (typeof(img) === "string") {
-        img = await this.getImageFromDataURL(img);
-      }
-      if (img instanceof Blob) {
-        img = await this.getImageFromBlob(img);
-      }
-      this.canvasElement.width = rect.width;
-      this.canvasElement.height = rect.height;
-      ctx.drawImage(img, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
-      return this.canvasElement.toDataURL();
-    }
-  }
+
 
   async getImageFromBlob(source:Blob){
     return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -791,32 +736,10 @@ export class ImageCropper {
     })
   }
 
-  @Method()
-  async detect(source: string | HTMLImageElement | Blob | HTMLCanvasElement):Promise<DetectedQuadResult[]>
-  {
-    if (window["Dynamsoft"]) {
-      if (!this.cvr) {
-        await this.initCVR();
-      }
-      this.cvr.maxCvsSideLength = 99999;
-      let result:CapturedResult = await this.cvr.capture(source,"DetectDocumentBoundaries_Default",true);
-      let results:DetectedQuadResultItem[] = [];
-      for (let index = 0; index < result.items.length; index++) {
-        const item = (result.items[index] as DetectedQuadResultItem);
-        results.push(item);
-      }
-      return results;
-    }else{
-      throw "Dynamsoft Document Normalizer not found";
-    }
-  }
+ @Method()
+ detect(){}
 
-  async initCVR(){
-    window["Dynamsoft"]["License"]["LicenseManager"].initLicense(this.license);
-    window["Dynamsoft"]["Core"]["CoreModule"].loadWasm(["DDN"]);
-    this.cvr = await window["Dynamsoft"]["CVR"]["CaptureVisionRouter"].createInstance();
-    await this.cvr.initSettings("{\"CaptureVisionTemplates\": [{\"Name\": \"Default\"},{\"Name\": \"DetectDocumentBoundaries_Default\",\"ImageROIProcessingNameArray\": [\"roi-detect-document-boundaries\"]},{\"Name\": \"DetectAndNormalizeDocument_Default\",\"ImageROIProcessingNameArray\": [\"roi-detect-and-normalize-document\"]},{\"Name\": \"NormalizeDocument_Binary\",\"ImageROIProcessingNameArray\": [\"roi-normalize-document-binary\"]},  {\"Name\": \"NormalizeDocument_Gray\",\"ImageROIProcessingNameArray\": [\"roi-normalize-document-gray\"]},  {\"Name\": \"NormalizeDocument_Color\",\"ImageROIProcessingNameArray\": [\"roi-normalize-document-color\"]}],\"TargetROIDefOptions\": [{\"Name\": \"roi-detect-document-boundaries\",\"TaskSettingNameArray\": [\"task-detect-document-boundaries\"]},{\"Name\": \"roi-detect-and-normalize-document\",\"TaskSettingNameArray\": [\"task-detect-and-normalize-document\"]},{\"Name\": \"roi-normalize-document-binary\",\"TaskSettingNameArray\": [\"task-normalize-document-binary\"]},  {\"Name\": \"roi-normalize-document-gray\",\"TaskSettingNameArray\": [\"task-normalize-document-gray\"]},  {\"Name\": \"roi-normalize-document-color\",\"TaskSettingNameArray\": [\"task-normalize-document-color\"]}],\"DocumentNormalizerTaskSettingOptions\": [{\"Name\": \"task-detect-and-normalize-document\",\"SectionImageParameterArray\": [{\"Section\": \"ST_REGION_PREDETECTION\",\"ImageParameterName\": \"ip-detect-and-normalize\"},{\"Section\": \"ST_DOCUMENT_DETECTION\",\"ImageParameterName\": \"ip-detect-and-normalize\"},{\"Section\": \"ST_DOCUMENT_NORMALIZATION\",\"ImageParameterName\": \"ip-detect-and-normalize\"}]},{\"Name\": \"task-detect-document-boundaries\",\"TerminateSetting\": {\"Section\": \"ST_DOCUMENT_DETECTION\"},\"SectionImageParameterArray\": [{\"Section\": \"ST_REGION_PREDETECTION\",\"ImageParameterName\": \"ip-detect\"},{\"Section\": \"ST_DOCUMENT_DETECTION\",\"ImageParameterName\": \"ip-detect\"},{\"Section\": \"ST_DOCUMENT_NORMALIZATION\",\"ImageParameterName\": \"ip-detect\"}]},{\"Name\": \"task-normalize-document-binary\",\"StartSection\": \"ST_DOCUMENT_NORMALIZATION\",   \"ColourMode\": \"ICM_BINARY\",\"SectionImageParameterArray\": [{\"Section\": \"ST_REGION_PREDETECTION\",\"ImageParameterName\": \"ip-normalize\"},{\"Section\": \"ST_DOCUMENT_DETECTION\",\"ImageParameterName\": \"ip-normalize\"},{\"Section\": \"ST_DOCUMENT_NORMALIZATION\",\"ImageParameterName\": \"ip-normalize\"}]},  {\"Name\": \"task-normalize-document-gray\",   \"ColourMode\": \"ICM_GRAYSCALE\",\"StartSection\": \"ST_DOCUMENT_NORMALIZATION\",\"SectionImageParameterArray\": [{\"Section\": \"ST_REGION_PREDETECTION\",\"ImageParameterName\": \"ip-normalize\"},{\"Section\": \"ST_DOCUMENT_DETECTION\",\"ImageParameterName\": \"ip-normalize\"},{\"Section\": \"ST_DOCUMENT_NORMALIZATION\",\"ImageParameterName\": \"ip-normalize\"}]},  {\"Name\": \"task-normalize-document-color\",   \"ColourMode\": \"ICM_COLOUR\",\"StartSection\": \"ST_DOCUMENT_NORMALIZATION\",\"SectionImageParameterArray\": [{\"Section\": \"ST_REGION_PREDETECTION\",\"ImageParameterName\": \"ip-normalize\"},{\"Section\": \"ST_DOCUMENT_DETECTION\",\"ImageParameterName\": \"ip-normalize\"},{\"Section\": \"ST_DOCUMENT_NORMALIZATION\",\"ImageParameterName\": \"ip-normalize\"}]}],\"ImageParameterOptions\": [{\"Name\": \"ip-detect-and-normalize\",\"BinarizationModes\": [{\"Mode\": \"BM_LOCAL_BLOCK\",\"BlockSizeX\": 0,\"BlockSizeY\": 0,\"EnableFillBinaryVacancy\": 0}],\"TextDetectionMode\": {\"Mode\": \"TTDM_WORD\",\"Direction\": \"HORIZONTAL\",\"Sensitivity\": 7}},{\"Name\": \"ip-detect\",\"BinarizationModes\": [{\"Mode\": \"BM_LOCAL_BLOCK\",\"BlockSizeX\": 0,\"BlockSizeY\": 0,\"EnableFillBinaryVacancy\": 0,\"ThresholdCompensation\" : 7}],\"TextDetectionMode\": {\"Mode\": \"TTDM_WORD\",\"Direction\": \"HORIZONTAL\",\"Sensitivity\": 7},\"ScaleDownThreshold\" : 512},{\"Name\": \"ip-normalize\",\"BinarizationModes\": [{\"Mode\": \"BM_LOCAL_BLOCK\",\"BlockSizeX\": 0,\"BlockSizeY\": 0,\"EnableFillBinaryVacancy\": 0}],\"TextDetectionMode\": {\"Mode\": \"TTDM_WORD\",\"Direction\": \"HORIZONTAL\",\"Sensitivity\": 7}}]}");
-  }
+
 
   getSVGWidth(){
     if (this.img && this.svgElement) {
@@ -873,12 +796,12 @@ export class ImageCropper {
           onWheel={(e:WheelEvent)=>this.onContainerWheel(e)}
           onMouseUp={()=>this.onContainerMouseUp()}
         >
-          <canvas 
+          <canvas
             ref={(el) => this.canvasElement = el as HTMLCanvasElement}
             class="hidden-canvas"
           ></canvas>
-          <svg 
-            version="1.1" 
+          <svg
+            version="1.1"
             ref={(el) => this.svgElement = el as SVGElement}
             class="cropper-svg"
             xmlns="http://www.w3.org/2000/svg"
@@ -918,35 +841,35 @@ export class ImageCropper {
       </Host>
     );
   }
-  
+
   showMagnifier() {
     if (this.magnifierElement) {
       this.magnifierElement.style.display = 'block';
     }
   }
-  
+
   hideMagnifier() {
     if (this.magnifierElement) {
       this.magnifierElement.style.display = 'none';
     }
   }
-  
+
   updateMagnifier(coord: Point) {
     if (!this.magnifierElement || !this.img) return;
-  
+
     // Get the coordinates and dimensions of the rect
     const rect = this.getRectFromPoints(this.points);
-  
+
     // Calculate the position of the magnifier
     const magnifierSize = 100; // Example size
     // const magnifierLeft = (coord.x - 300) - magnifierSize / 2 ;
     // const magnifierTop = (coord.y - 200) - magnifierSize / 2;
     const magnifierLeft = coord.x - magnifierSize ;
     const magnifierTop = coord.y - magnifierSize;
-  
+
     // Cast svgElement to SVGSVGElement to use createSVGPoint
     const svgElement = this.svgElement as unknown as SVGSVGElement;
-  
+
     // Check if getScreenCTM and createSVGPoint methods are available
     if (svgElement.getScreenCTM && svgElement.createSVGPoint) {
       const ctm = svgElement.getScreenCTM();
@@ -954,7 +877,7 @@ export class ImageCropper {
       point.x = magnifierLeft;
       point.y = magnifierTop;
       const transformedPoint = point.matrixTransform(ctm);
-  
+
       // Set the magnifier's position
       this.magnifierElement.style.left = `${transformedPoint.x - 40}px`;
       this.magnifierElement.style.top = `${transformedPoint.y - 210}px`;
@@ -963,7 +886,7 @@ export class ImageCropper {
       this.magnifierElement.style.left = `${magnifierLeft}px`;
       this.magnifierElement.style.top = `${magnifierTop}px`;
     }
-  
+
     // Set the magnifier's content (e.g., magnified image)
     const zoomLevel = 0.5; // Example zoom level
     const sx = Math.max(0, rect.x + (coord.x - rect.x) / this.scale - magnifierSize / zoomLevel / 2);
@@ -974,12 +897,12 @@ export class ImageCropper {
     const dy = 0;
     const dw = magnifierSize;
     const dh = magnifierSize;
-  
+
     const magnifierCanvas = document.createElement("canvas");
     magnifierCanvas.width = magnifierSize;
     magnifierCanvas.height = magnifierSize;
     const magnifierCtx = magnifierCanvas.getContext("2d");
-  
+
     magnifierCtx.drawImage(this.img, sx, sy, sw, sh, dx, dy, dw, dh);
 
     // Draw the polygon on the magnifier canvas
@@ -993,11 +916,11 @@ export class ImageCropper {
     }
     magnifierCtx.closePath();
     magnifierCtx.stroke();
-  
+
     this.magnifierElement.style.backgroundImage = `url(${magnifierCanvas.toDataURL()})`;
   }
-  
-  
+
+
 
 
 }
