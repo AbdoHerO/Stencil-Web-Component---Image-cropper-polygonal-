@@ -82,20 +82,24 @@ export class ImageCropper {
   @Watch('img')
   watchImgPropHandler(newValue: HTMLImageElement) {
     if (newValue) {
+      console.log('watchImgPropHandler triggered with newValue:', newValue);
       this.resetStates();
-      this.viewBox = "0 0 "+newValue.naturalWidth+" "+newValue.naturalHeight;
+      this.viewBox = `0 0 ${newValue.naturalWidth} ${newValue.naturalHeight}`;
+      console.log('viewBox set to:', this.viewBox);
       if (this.root) {
         const inActiveStroke = parseInt(this.root.style.getPropertyValue("--inactive-stroke"));
         const activeStroke = parseInt(this.root.style.getPropertyValue("--active-stroke"));
-        if (inActiveStroke){
+        console.log('inActiveStroke:', inActiveStroke, 'activeStroke:', activeStroke);
+        if (inActiveStroke) {
           this.inActiveStroke = inActiveStroke;
         }
-        if (activeStroke){
+        if (activeStroke) {
           this.activeStroke = activeStroke;
         }
       }
     }
   }
+
 
   @Watch('rect')
   watchRectPropHandler(newValue: Rect) {
