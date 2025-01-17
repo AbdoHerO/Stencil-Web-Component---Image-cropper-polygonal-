@@ -737,7 +737,7 @@ export class ImageCropper {
   }
 
  @Method()
- detect(){}
+ async detect(){}
 
 
 

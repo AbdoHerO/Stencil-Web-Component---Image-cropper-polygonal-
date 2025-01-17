@@ -16,6 +16,7 @@
 | `license`            | `license`     |             | `string`           | `undefined` |
 | `quad`               | --            |             | `Quad`             | `undefined` |
 | `rect`               | --            |             | `Rect`             | `undefined` |
+| `rotation`           | `rotation`    |             | `number`           | `0`         |
 
 
 ## Events
@@ -29,19 +30,13 @@
 
 ## Methods
 
-### `detect(source: string | HTMLImageElement | Blob | HTMLCanvasElement) => Promise<DetectedQuadResult[]>`
+### `detect() => Promise<void>`
 
 
-
-#### Parameters
-
-| Name     | Type                                                      | Description |
-| -------- | --------------------------------------------------------- | ----------- |
-| `source` | `string \| HTMLCanvasElement \| HTMLImageElement \| Blob` |             |
 
 #### Returns
 
-Type: `Promise<DetectedQuadResult[]>`
+Type: `Promise<void>`
 
 
 
@@ -58,22 +53,6 @@ Type: `Promise<DetectedQuadResult[]>`
 #### Returns
 
 Type: `Promise<(Quad | Rect)[]>`
-
-
-
-### `getCroppedImage(options: CropOptions) => Promise<string>`
-
-
-
-#### Parameters
-
-| Name      | Type          | Description |
-| --------- | ------------- | ----------- |
-| `options` | `CropOptions` |             |
-
-#### Returns
-
-Type: `Promise<string>`
 
 
 

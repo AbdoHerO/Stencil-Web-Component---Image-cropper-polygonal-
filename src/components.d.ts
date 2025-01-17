@@ -5,17 +5,12 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
-import { CropOptions, DetectedQuadResult, Point, Quad, Rect } from "./components/image-cropper/image-cropper";
-import { CapturedResult } from "dynamsoft-core";
-import { DetectedQuadResultItem, NormalizedImageResultItem } from "dynamsoft-document-normalizer";
-export { CropOptions, DetectedQuadResult, Point, Quad, Rect } from "./components/image-cropper/image-cropper";
-export { CapturedResult } from "dynamsoft-core";
-export { DetectedQuadResultItem, NormalizedImageResultItem } from "dynamsoft-document-normalizer";
+import { Point, Quad, Rect } from "./components/image-cropper/image-cropper";
+export { Point, Quad, Rect } from "./components/image-cropper/image-cropper";
 export namespace Components {
     interface ImageCropper {
-        "detect": (source: string | HTMLImageElement | Blob | HTMLCanvasElement) => Promise<DetectedQuadResult[]>;
+        "detect": () => Promise<void>;
         "getAllSelections": (convertTo?: "rect" | "quad") => Promise<(Quad | Rect)[]>;
-        "getCroppedImage": (options: CropOptions) => Promise<string>;
         "getPoints": () => Promise<[Point, Point, Point, Point]>;
         "getQuad": () => Promise<Quad>;
         "getRect": () => Promise<Rect>;
@@ -27,6 +22,7 @@ export namespace Components {
         "quad"?: Quad;
         "rect"?: Rect;
         "resetStates": () => Promise<void>;
+        "rotation": number;
     }
 }
 export interface ImageCropperCustomEvent<T> extends CustomEvent<T> {
@@ -69,6 +65,7 @@ declare namespace LocalJSX {
         "onSelectionClicked"?: (event: ImageCropperCustomEvent<number>) => void;
         "quad"?: Quad;
         "rect"?: Rect;
+        "rotation"?: number;
     }
     interface IntrinsicElements {
         "image-cropper": ImageCropper;
