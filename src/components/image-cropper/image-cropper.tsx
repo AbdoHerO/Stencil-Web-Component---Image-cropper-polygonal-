@@ -69,14 +69,30 @@ export class ImageCropper {
   @Event() canceled?: EventEmitter<void>;
   @Event() selectionClicked?: EventEmitter<number>;
 
-  componentDidLoad(){
-    this.containerElement.addEventListener("touchmove", (e:TouchEvent) => {
+  // componentDidLoad(){
+  //   this.containerElement.addEventListener("touchmove", (e:TouchEvent) => {
+  //     this.onContainerTouchMove(e);
+  //   })
+  //   this.containerElement.addEventListener("touchend", () => {
+  //     this.previousDistance = undefined;
+  //     this.hideMagnifier(); // Hide magnifier on touch end
+  //   })
+  // }
+
+  componentDidLoad() {
+    // If user moves their finger on the container
+    this.containerElement.addEventListener('touchmove', (e: TouchEvent) => {
       this.onContainerTouchMove(e);
-    })
-    this.containerElement.addEventListener("touchend", () => {
+    });
+  
+    // When user lifts their finger anywhere in container:
+    this.containerElement.addEventListener('touchend', () => {
       this.previousDistance = undefined;
-      this.hideMagnifier(); // Hide magnifier on touch end
-    })
+      this.hideMagnifier(); 
+      // === End any drag that was in progress ===
+      this.selectedHandlerIndex = -1;
+      this.polygonMouseDown = false;
+    });
   }
 
   @Watch('img')
@@ -180,14 +196,15 @@ export class ImageCropper {
     }
     return (
       <Fragment>
-        {this.inactiveSelections.map((selection,index) => (
+        {this.inactiveSelections.map((selection) => (
           <polygon
             points={this.getPointsDataFromSelection(selection)}
             class="inactive-selection dashed"
+            style={{ pointerEvents: 'none' }}
             stroke-width={this.inActiveStroke * this.getRatio()}
             fill="transparent"
-            onMouseUp={()=>this.onSelectionClicked(index)}
-            onTouchStart={()=>this.onSelectionClicked(index)}
+            // onMouseUp={()=>this.onSelectionClicked(index)}
+            // onTouchStart={()=>this.onSelectionClicked(index)}
           >
          </polygon>
         ))}
@@ -223,17 +240,20 @@ export class ImageCropper {
       <Fragment>
         {this.handlers.map(index => (
           <rect
-            x={this.getHandlerPos(index,"x")}
-            y={this.getHandlerPos(index,"y")}
-            width={this.getHandlerSize()}
-            height={this.getHandlerSize()}
-            class="cropper-controls"
-            stroke-width={index === this.selectedHandlerIndex ? this.activeStroke * 2 * this.getRatio() : this.activeStroke * this.getRatio()}
-            fill="transparent"
-            onMouseDown={(e:MouseEvent)=>this.onHandlerMouseDown(e,index)}
-            onMouseUp={(e:MouseEvent)=>this.onHandlerMouseUp(e)}
-            onTouchStart={(e:TouchEvent)=>this.onHandlerTouchStart(e,index)}
-            onPointerDown={(e:PointerEvent)=>this.onHandlerPointerDown(e,index)}
+          x={this.getHandlerPos(index,"x")}
+          y={this.getHandlerPos(index,"y")}
+          width={this.getHandlerSize()}
+          height={this.getHandlerSize()}
+          class="cropper-controls"
+          stroke-width={index === this.selectedHandlerIndex 
+            ? this.activeStroke * 2 * this.getRatio() 
+            : this.activeStroke * this.getRatio()}
+          fill="none"
+          pointer-events="visibleStroke"
+          onMouseDown={(e:MouseEvent)=>this.onHandlerMouseDown(e,index)}
+          onMouseUp={(e:MouseEvent)=>this.onHandlerMouseUp(e)}
+          onTouchStart={(e:TouchEvent)=>this.onHandlerTouchStart(e,index)}
+          onPointerDown={(e:PointerEvent)=>this.onHandlerPointerDown(e,index)}
           />
         ))}
       </Fragment>
@@ -474,13 +494,15 @@ export class ImageCropper {
     }
   }
 
-  restrainPointsInBounds(points:[Point,Point,Point,Point],imgWidth:number,imgHeight:number){
+  restrainPointsInBounds(points: [Point, Point, Point, Point], imgWidth: number, imgHeight: number){
+    // Define the margin/padding you want:
+    const margin = 20; // or 10, 20, etc. – whichever "inset" you prefer
     for (let index = 0; index < points.length; index++) {
       const point = points[index];
-      point.x = Math.max(0,point.x);
-      point.x = Math.min(point.x,imgWidth);
-      point.y = Math.max(0,point.y);
-      point.y = Math.min(point.y,imgHeight);
+      point.x = Math.max(margin, point.x);
+      point.x = Math.min(point.x, imgWidth - margin);
+      point.y = Math.max(margin, point.y);
+      point.y = Math.min(point.y, imgHeight - margin);
     }
   }
 
@@ -526,12 +548,30 @@ export class ImageCropper {
     this.hideMagnifier(); // Hide the magnifier when the rect stops being moved
   }
 
-  onHandlerMouseDown(e:MouseEvent,index:number){
+  // onHandlerMouseDown(e:MouseEvent,index:number){
+  //   e.stopPropagation();
+  //   let coord = this.getMousePosition(e,this.svgElement);
+  //   this.originalPoints = JSON.parse(JSON.stringify(this.points));
+  //   this.handlerMouseDownPoint.x = coord.x;
+  //   this.handlerMouseDownPoint.y = coord.y;
+  //   this.selectedHandlerIndex = index;
+  // }
+
+  onHandlerMouseDown(e: MouseEvent, index: number) {
     e.stopPropagation();
-    let coord = this.getMousePosition(e,this.svgElement);
+  
+    // If we’re already dragging a different handle, end that drag first:
+    if (this.selectedHandlerIndex !== -1 && this.selectedHandlerIndex !== index) {
+      // Manually call mouse-up logic to finalize the old handle drag
+      this.onHandlerMouseUp(e);
+    }
+  
+    let coord = this.getMousePosition(e, this.svgElement);
     this.originalPoints = JSON.parse(JSON.stringify(this.points));
     this.handlerMouseDownPoint.x = coord.x;
     this.handlerMouseDownPoint.y = coord.y;
+  
+    // Now select the new handle
     this.selectedHandlerIndex = index;
   }
 
@@ -826,14 +866,15 @@ export class ImageCropper {
             <polygon
               points={this.getPointsData()}
               class="cropper-controls dashed"
+              style={{ pointerEvents: 'none' }}
               stroke-width={this.activeStroke * this.getRatio()}
               fill="transparent"
-              onMouseDown={(e:MouseEvent)=>this.onPolygonMouseDown(e)}
-              onMouseUp={(e:MouseEvent)=>this.onPolygonMouseUp(e)}
-              onTouchStart={(e:TouchEvent)=>this.onPolygonTouchStart(e)}
-              onTouchEnd={(e:TouchEvent)=>this.onPolygonTouchEnd(e)}
-              onPointerDown={(e:PointerEvent)=>this.onPolygonPointerDown(e)}
-              onPointerUp={(e:PointerEvent)=>this.onPolygonPointerUp(e)}
+              // onMouseDown={(e:MouseEvent)=>this.onPolygonMouseDown(e)}
+              // onMouseUp={(e:MouseEvent)=>this.onPolygonMouseUp(e)}
+              // onTouchStart={(e:TouchEvent)=>this.onPolygonTouchStart(e)}
+              // onTouchEnd={(e:TouchEvent)=>this.onPolygonTouchEnd(e)}
+              // onPointerDown={(e:PointerEvent)=>this.onPolygonPointerDown(e)}
+              // onPointerUp={(e:PointerEvent)=>this.onPolygonPointerUp(e)}
             >
             </polygon>
             {this.renderHandlers()}
