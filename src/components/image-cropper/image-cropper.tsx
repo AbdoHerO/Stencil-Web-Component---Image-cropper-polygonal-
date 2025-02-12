@@ -238,25 +238,39 @@ export class ImageCropper {
     }
     return (
       <Fragment>
-        {this.handlers.map(index => (
+      {this.handlers.map(index => (
+        <g>
+          {/* Invisible hit area with larger stroke */}
           <rect
-          x={this.getHandlerPos(index,"x")}
-          y={this.getHandlerPos(index,"y")}
-          width={this.getHandlerSize()}
-          height={this.getHandlerSize()}
-          class="cropper-controls"
-          stroke-width={index === this.selectedHandlerIndex 
-            ? this.activeStroke * 2 * this.getRatio() 
-            : this.activeStroke * this.getRatio()}
-          fill="none"
-          pointer-events="visibleStroke"
-          onMouseDown={(e:MouseEvent)=>this.onHandlerMouseDown(e,index)}
-          onMouseUp={(e:MouseEvent)=>this.onHandlerMouseUp(e)}
-          onTouchStart={(e:TouchEvent)=>this.onHandlerTouchStart(e,index)}
-          onPointerDown={(e:PointerEvent)=>this.onHandlerPointerDown(e,index)}
+            x={this.getHandlerPos(index, "x")}
+            y={this.getHandlerPos(index, "y")}
+            width={this.getHandlerSize()}
+            height={this.getHandlerSize()}
+            class="cropper-controls-hit"
+            stroke="transparent"
+            stroke-width={20 * this.getRatio()} // Larger hit area
+            fill="none"
+            pointer-events="visibleStroke"
+            onMouseDown={(e: MouseEvent) => this.onHandlerMouseDown(e, index)}
+            onTouchStart={(e: TouchEvent) => this.onHandlerTouchStart(e, index)}
           />
-        ))}
-      </Fragment>
+          {/* Visible handle */}
+          <rect
+            x={this.getHandlerPos(index, "x")}
+            y={this.getHandlerPos(index, "y")}
+            width={this.getHandlerSize()}
+            height={this.getHandlerSize()}
+            class="cropper-controls-visual"
+            stroke-width={index === this.selectedHandlerIndex 
+              ? this.activeStroke * 2 * this.getRatio() 
+              : this.activeStroke * this.getRatio()}
+            stroke="currentColor"
+            fill="none"
+            pointer-events="none"
+          />
+        </g>
+      ))}
+    </Fragment>
     )
   }
 
@@ -863,7 +877,7 @@ export class ImageCropper {
           >
             <image href={this.img ? this.img.src : ""}></image>
             {this.rendenInactiveSelections()}
-            <polygon
+            {/* <polygon
               points={this.getPointsData()}
               class="cropper-controls dashed"
               style={{ pointerEvents: 'none' }}
@@ -876,7 +890,17 @@ export class ImageCropper {
               // onPointerDown={(e:PointerEvent)=>this.onPolygonPointerDown(e)}
               // onPointerUp={(e:PointerEvent)=>this.onPolygonPointerUp(e)}
             >
-            </polygon>
+            </polygon> */}
+
+            <polygon
+                points={this.getPointsData()}
+                class="cropper-controls-visual dashed"
+                stroke-width={this.activeStroke * this.getRatio()}
+                stroke="currentColor"
+                fill="transparent"
+                pointer-events="none">
+            </polygon> 
+            
             {this.renderHandlers()}
           </svg>
           {this.renderFooter()}
