@@ -199,7 +199,7 @@ export class ImageCropper {
         {this.inactiveSelections.map((selection) => (
           <polygon
             points={this.getPointsDataFromSelection(selection)}
-            class="inactive-selection dashed"
+            class="inactive-selection"
             style={{ pointerEvents: 'none' }}
             stroke-width={this.inActiveStroke * this.getRatio()}
             fill="transparent"
@@ -300,7 +300,7 @@ export class ImageCropper {
 
   getHandlerSize() {
     let ratio = this.getRatio();
-    let size:number = 20;
+    let size:number = 25;
     if (this.handlersize) {
       try {
         size = parseInt(this.handlersize);
@@ -894,7 +894,7 @@ export class ImageCropper {
 
             <polygon
                 points={this.getPointsData()}
-                class="cropper-controls-visual dashed"
+                class="cropper-controls-visual"
                 stroke-width={this.activeStroke * this.getRatio()}
                 stroke="currentColor"
                 fill="transparent"

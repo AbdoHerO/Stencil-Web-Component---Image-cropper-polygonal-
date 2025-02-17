@@ -87,6 +87,7 @@
   align-self: center;
   touch-action: none;
   cursor:grab;
+  color: var(--active-color);
 }
 
 .cropper-svg polygon {
